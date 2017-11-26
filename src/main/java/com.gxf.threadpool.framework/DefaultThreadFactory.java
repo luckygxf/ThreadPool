@@ -8,6 +8,6 @@ import java.util.concurrent.ThreadFactory;
  */
 public class DefaultThreadFactory implements ThreadFactory {
     public Thread newThread(Runnable r) {
-        return null;
+        return new Thread(r);
     }
 }

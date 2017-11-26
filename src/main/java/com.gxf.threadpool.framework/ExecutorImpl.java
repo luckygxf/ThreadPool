@@ -1,6 +1,7 @@
 package com.gxf.threadpool.framework;
 
 import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 
@@ -9,9 +10,9 @@ import java.util.concurrent.ThreadFactory;
  */
 public class ExecutorImpl implements Executor {
     //使用线程池，执行任务
-    private Thread[] threadPool;
+    private Worker[] threadPool;
     //任务队列
-    private Queue<Runnable> taskQueue;
+    public static BlockingQueue<Runnable> taskQueue;
     //线程池大小
     private int threadPoolSize;
     //线程工厂
@@ -21,17 +22,18 @@ public class ExecutorImpl implements Executor {
     //默认线程工厂
     private ThreadFactory defaultThreadFactory = new DefaultThreadFactory();
     //默认任务队列
-    private Queue<Runnable> defaultTaskQueue = new LinkedBlockingQueue<Runnable>();
+    private BlockingQueue<Runnable> defaultTaskQueue = new LinkedBlockingQueue<Runnable>();
     //当前线程池线程数
     private int curThreadNum = 0;
 
-    public ExecutorImpl(Queue<Runnable> taskQueue, int threadPoolSize, ThreadFactory threadFactory) {
+    public ExecutorImpl(BlockingQueue<Runnable> taskQueue, int threadPoolSize, ThreadFactory threadFactory) {
         this.taskQueue = taskQueue;
         this.threadPoolSize = threadPoolSize;
         this.threadFactory = threadFactory;
     }
 
     public ExecutorImpl() {
+        this.threadPool = new Worker[defaultThreadPoolSize];
         this.taskQueue = defaultTaskQueue;
         this.threadPoolSize = defaultThreadPoolSize;
         this.threadFactory = defaultThreadFactory;
@@ -42,11 +44,20 @@ public class ExecutorImpl implements Executor {
      * 如果当前线程数小于线程池大小，创建新的线程
      * */
     public MyFuture execute(Runnable task) {
-        taskQueue.add(task);
+        //当前线程小于线程池大小，新建线程
         if(curThreadNum < threadPoolSize){
-            threadPool[curThreadNum ++] = threadFactory.newThread(task);
+            Worker worker = new Worker(task);
+            Thread t = worker.getThread();
+            t.start();
+            curThreadNum ++;
         }
-        return null;
+        //大于当前线程池大小，提交到任务队列
+        else{
+            taskQueue.add(task);
+        }
+        System.out.println("cur pool size : " + curThreadNum);
+        System.out.println("cur queue size : " + taskQueue.size());
+        return new MyFutureImpl();
     }
 
     public void close() {
@@ -59,4 +70,6 @@ public class ExecutorImpl implements Executor {
     public void submit(Runnable task) {
         taskQueue.add(task);
     }
+
+
 }
